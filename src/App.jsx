@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import Chessboard from "react-chessboard";
+      import { useEffect, useRef, useState } from "react";
+import { Chessboard } from "react-chessboard"; // ✅ FIXED IMPORT
 import { Chess } from "chess.js";
 import axios from "axios";
 
@@ -13,6 +13,7 @@ export default function App() {
 
   const engineRef = useRef(null);
 
+  // 🔧 Stockfish setup
   useEffect(() => {
     const engine = new Worker(
       "https://cdn.jsdelivr.net/npm/stockfish/stockfish.js"
@@ -32,24 +33,32 @@ export default function App() {
     engineRef.current = engine;
   }, []);
 
+  // 🔍 Analyze position
   const analyze = (fen) => {
     const engine = engineRef.current;
+    if (!engine) return;
     engine.postMessage(`position fen ${fen}`);
     engine.postMessage("go movetime 700");
   };
 
+  // 🌐 Fetch games from Chess.com
   const fetchGames = async () => {
-    const res = await axios.get(
-      `https://api.chess.com/pub/player/${username}/games/archives`
-    );
+    try {
+      const res = await axios.get(
+        `https://api.chess.com/pub/player/${username}/games/archives`
+      );
 
-    const latest = res.data.archives.slice(-1)[0];
-    const gamesRes = await axios.get(latest);
+      const latest = res.data.archives.slice(-1)[0];
+      const gamesRes = await axios.get(latest);
 
-    setGames(gamesRes.data.games);
-    setScreen("games");
+      setGames(gamesRes.data.games);
+      setScreen("games");
+    } catch (err) {
+      alert("Failed to fetch games. Check username.");
+    }
   };
 
+  // ♟ Load selected game
   const loadGame = (pgn) => {
     const newGame = new Chess();
     newGame.loadPgn(pgn);
@@ -58,6 +67,7 @@ export default function App() {
     runReview(newGame);
   };
 
+  // 📊 Analyze full game
   const runReview = async (fullGame) => {
     const temp = new Chess();
     setReview([]);
@@ -75,17 +85,22 @@ export default function App() {
     }
   };
 
+  // 🟢 Welcome Screen
   if (screen === "welcome") {
     return (
       <div className="center">
         <h2>Welcome 👋</h2>
         <p>Enter your Chess.com ID</p>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
         <button onClick={fetchGames}>Fetch Games</button>
       </div>
     );
   }
 
+  // 🟡 Game Selection Screen
   if (screen === "games") {
     return (
       <div className="container">
@@ -99,6 +114,7 @@ export default function App() {
     );
   }
 
+  // 🔴 Analysis Screen
   return (
     <div className="layout">
       <div className="board">
@@ -126,4 +142,4 @@ export default function App() {
       </div>
     </div>
   );
-}
+                        }
