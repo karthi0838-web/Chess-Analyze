@@ -1,0 +1,40 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+}
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 100px;
+}
+.container {
+  padding: 20px;
+}
+.card {
+  padding: 10px;
+  border: 1px solid gray;
+  margin: 5px;
+  cursor: pointer;
+}
+.layout {
+  display: flex;
+}
+.board {
+  flex: 1;
+}
+.sidebar {
+  width: 250px;
+  padding: 10px;
+}
+.evalbar {
+  height: 200px;
+  width: 20px;
+  background: gray;
+}
+.fill {
+  width: 100%;
+  background: white;
+}
