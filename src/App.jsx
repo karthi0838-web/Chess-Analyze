@@ -1,5 +1,5 @@
-      import { useEffect, useRef, useState } from "react";
-import { Chessboard } from "react-chessboard"; // ✅ FIXED IMPORT
+import { useEffect, useRef, useState } from "react";
+import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import axios from "axios";
 
@@ -13,35 +13,43 @@ export default function App() {
 
   const engineRef = useRef(null);
 
-  // 🔧 Stockfish setup
+  // ✅ SAFE Stockfish setup (no crash)
   useEffect(() => {
-    const engine = new Worker(
-      "https://cdn.jsdelivr.net/npm/stockfish/stockfish.js"
-    );
+    try {
+      const engine = new Worker(
+        "https://cdn.jsdelivr.net/npm/stockfish/stockfish.js"
+      );
 
-    engine.postMessage("uci");
-    engine.postMessage("setoption name Threads value 2");
+      engine.postMessage("uci");
+      engine.postMessage("setoption name Threads value 1");
 
-    engine.onmessage = (e) => {
-      const line = e.data;
-      if (line.includes("score cp")) {
-        const val = parseInt(line.match(/score cp (-?\d+)/)?.[1] || 0);
-        setEvalScore(val / 100);
-      }
-    };
+      engine.onmessage = (e) => {
+        const line = e.data;
+        if (line.includes("score cp")) {
+          const val = parseInt(line.match(/score cp (-?\d+)/)?.[1] || 0);
+          setEvalScore(val / 100);
+        }
+      };
 
-    engineRef.current = engine;
+      engine.onerror = () => {
+        console.log("Stockfish error - continuing without engine");
+      };
+
+      engineRef.current = engine;
+    } catch (err) {
+      console.log("Worker not supported");
+    }
   }, []);
 
-  // 🔍 Analyze position
+  // ✅ Safe analyze
   const analyze = (fen) => {
     const engine = engineRef.current;
     if (!engine) return;
     engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("go movetime 700");
+    engine.postMessage("go movetime 500");
   };
 
-  // 🌐 Fetch games from Chess.com
+  // Fetch games
   const fetchGames = async () => {
     try {
       const res = await axios.get(
@@ -53,12 +61,12 @@ export default function App() {
 
       setGames(gamesRes.data.games);
       setScreen("games");
-    } catch (err) {
-      alert("Failed to fetch games. Check username.");
+    } catch {
+      alert("Invalid username or network issue");
     }
   };
 
-  // ♟ Load selected game
+  // Load game
   const loadGame = (pgn) => {
     const newGame = new Chess();
     newGame.loadPgn(pgn);
@@ -67,7 +75,7 @@ export default function App() {
     runReview(newGame);
   };
 
-  // 📊 Analyze full game
+  // Review
   const runReview = async (fullGame) => {
     const temp = new Chess();
     setReview([]);
@@ -76,7 +84,7 @@ export default function App() {
       temp.move(move);
       analyze(temp.fen());
 
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 500));
 
       setReview((prev) => [
         ...prev,
@@ -85,7 +93,7 @@ export default function App() {
     }
   };
 
-  // 🟢 Welcome Screen
+  // Welcome screen
   if (screen === "welcome") {
     return (
       <div className="center">
@@ -100,7 +108,7 @@ export default function App() {
     );
   }
 
-  // 🟡 Game Selection Screen
+  // Game list
   if (screen === "games") {
     return (
       <div className="container">
@@ -114,7 +122,7 @@ export default function App() {
     );
   }
 
-  // 🔴 Analysis Screen
+  // Analysis
   return (
     <div className="layout">
       <div className="board">
@@ -142,4 +150,4 @@ export default function App() {
       </div>
     </div>
   );
-                        }
+            }
