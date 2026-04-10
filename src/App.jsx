@@ -13,7 +13,7 @@ export default function App() {
 
   const engineRef = useRef(null);
 
-  // ✅ SAFE Stockfish setup (no crash)
+  // 🔧 Stockfish setup (safe)
   useEffect(() => {
     try {
       const engine = new Worker(
@@ -25,6 +25,7 @@ export default function App() {
 
       engine.onmessage = (e) => {
         const line = e.data;
+
         if (line.includes("score cp")) {
           const val = parseInt(line.match(/score cp (-?\d+)/)?.[1] || 0);
           setEvalScore(val / 100);
@@ -32,7 +33,7 @@ export default function App() {
       };
 
       engine.onerror = () => {
-        console.log("Stockfish error - continuing without engine");
+        console.log("Stockfish error");
       };
 
       engineRef.current = engine;
@@ -41,15 +42,16 @@ export default function App() {
     }
   }, []);
 
-  // ✅ Safe analyze
+  // 🔍 Safe analyze
   const analyze = (fen) => {
     const engine = engineRef.current;
     if (!engine) return;
+
     engine.postMessage(`position fen ${fen}`);
     engine.postMessage("go movetime 500");
   };
 
-  // Fetch games
+  // 🌐 Fetch games
   const fetchGames = async () => {
     try {
       const res = await axios.get(
@@ -66,7 +68,7 @@ export default function App() {
     }
   };
 
-  // Load game
+  // ♟ Load game
   const loadGame = (pgn) => {
     const newGame = new Chess();
     newGame.loadPgn(pgn);
@@ -75,25 +77,44 @@ export default function App() {
     runReview(newGame);
   };
 
-  // Review
+  // 📊 FIXED review (correct eval capture)
   const runReview = async (fullGame) => {
     const temp = new Chess();
     setReview([]);
 
     for (let move of fullGame.history()) {
       temp.move(move);
-      analyze(temp.fen());
 
-      await new Promise((r) => setTimeout(r, 500));
+      const engine = engineRef.current;
+      if (!engine) continue;
+
+      engine.postMessage(`position fen ${temp.fen()}`);
+      engine.postMessage("go movetime 800");
+
+      let evalValue = 0;
+
+      const handler = (e) => {
+        const line = e.data;
+        if (line.includes("score cp")) {
+          const val = parseInt(line.match(/score cp (-?\d+)/)?.[1] || 0);
+          evalValue = val / 100;
+        }
+      };
+
+      engine.addEventListener("message", handler);
+
+      await new Promise((r) => setTimeout(r, 900));
+
+      engine.removeEventListener("message", handler);
 
       setReview((prev) => [
         ...prev,
-        { move, eval: evalScore.toFixed(2) },
+        { move, eval: evalValue.toFixed(2) },
       ]);
     }
   };
 
-  // Welcome screen
+  // 🟢 Welcome
   if (screen === "welcome") {
     return (
       <div className="center">
@@ -108,7 +129,7 @@ export default function App() {
     );
   }
 
-  // Game list
+  // 🟡 Game selection
   if (screen === "games") {
     return (
       <div className="container">
@@ -122,11 +143,14 @@ export default function App() {
     );
   }
 
-  // Analysis
+  // 🔴 Analysis
   return (
     <div className="layout">
       <div className="board">
-        <Chessboard position={game.fen()} />
+        <Chessboard
+          position={game.fen()}
+          boardWidth={Math.min(window.innerWidth - 20, 400)}
+        />
       </div>
 
       <div className="sidebar">
@@ -150,4 +174,4 @@ export default function App() {
       </div>
     </div>
   );
-            }
+    }
